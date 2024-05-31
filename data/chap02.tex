@@ -2,7 +2,7 @@
 
 \chapter{信息整理与分析}
 
-\section{数据来源}
+\section{数据来源简介}
 
 \subsection{《中国药典》与中成药处方定量}
 
@@ -28,7 +28,7 @@ STRING, 即 Search Tool for the Retrieval of Interaction Gene/Proteins，是一�
 
 \begin{figure}[H]
   \centering
-  \includegraphics[width=0.8\textwidth]{figures/unlisted_medicinals_distribution}
+  \includegraphics[width=0.8\textwidth]{figures/unlisted_medicinals_distribution.png}
   \caption{《中国药典》中处方在ccTCM中缺失药材数据的分布情况}
   \label{fig:missing_herbs}
 \end{figure}
@@ -37,7 +37,7 @@ STRING, 即 Search Tool for the Retrieval of Interaction Gene/Proteins，是一�
 
 ccTCM 本身提供了使用中药、化合物或者基因靶标进行在线搜索的平台，但是这种访问方式不利于大规模的数据整理，因此我们选择了直接下载 ccTCM 的原始数据进行离线分析。这些数据以 TSV 格式存储在 \texttt{TCM\_information}, \texttt{Compound\_information}, \texttt{Target\_information} 这些基础信息文件和 \texttt{TCM\_compound-v1}, \texttt{Compound\_target-v1} 这两层关联文件之中，可以使用数据库合并的逻辑直接得到我们想要的信息，即药材中具体化合物的定量及特定化合物关联各基因的作用强度。其中，化合物定量往往可以给出一个具体的百分比范围，取其平均值进行后续计算即可，但是仅有 42\% 的化合物-基因关联存在以某种形式定量的作用强度，
 
-而且存在量纲不一致、大量作用强度只使用占位值（如 $100000 \mathrm{nM}$ ）的问题，几乎没有进行横向比较的可能，在本研究中只能暂时不考虑作用强度问题，或在某种程度上将其视为可学习的参数。我们实际得到的药材-基因定量关联权重是考虑所有与某种基因有关联的化合物，对它们在药材中的占比进行求和的结果，即：
+而且存在量纲不一致、大量作用强度只使用占位值（如 $100000~\mathrm{nM}$ ）的问题，几乎没有进行横向比较的可能，在本研究中只能暂时不考虑作用强度问题，或在某种程度上将其视为可学习的参数。我们实际得到的药材-基因定量关联权重是考虑所有与某种基因有关联的化合物，对它们在药材中的占比进行求和的结果，即：
 
 
 $$
@@ -46,4 +46,39 @@ $$
 
 \section{STRING查询与整理}
 
-根据2024年5月31日的数据，STRING 数据库共收录 12535 种生物体的近 6000 万个蛋白质， 互作关系的规模大于 200 亿，是一个非常庞大的数据库，但是其提供了丰富的查询接口，并编写了详细的说明文档（\url{https://string-db.org/help/api/}）。在这里，我们希望探究的是药材之前的相互作用，可分解为这样的子问题：遍历处方涉及的药材中的所有二元药材对，这两个药材关联基因的信息已经在前一步中获得，然后我们将这两个基因列表合并后调用STRING的 \texttt{network} API，就可以得到以原始 TSV 或 JSON 格式返回的基因互作分数网络，包括基因近邻分数、融合分数等多项细分关联度和STRING给出的一个综合分数，或者直接给出可视化图像。在我们已知
+根据2024年5月31日的数据，STRING 数据库共收录 12535 种生物体的近 6000 万个蛋白质， 互作关系的规模大于 200 亿，是一个非常庞大的数据库，但是其提供了丰富的查询接口，并编写了详细的说明文档（\url{https://string-db.org/help/api/}）。在这里，我们希望探究的是药材之前的相互作用，可分解为这样的子问题：遍历处方涉及的药材中的所有二元药材对，这两个药材关联基因的信息已经在前一步中获得，然后我们将这两个基因列表合并后调用STRING的 \texttt{network} API，就可以得到以原始 TSV 或 JSON 格式返回的基因互作分数网络，包括基因近邻分数、融合分数等多项细分关联度和STRING给出的一个综合分数，或者直接给出可视化图像。接下来，我们就可以利用原来的列表从返回的网络中筛选所需的交互关联，以及作为对照的药材内部关联，如下面“二冬膏”的例子：
+
+
+\begin{figure}[H]
+  \centering
+  \begin{minipage}[b]{0.4\textwidth}
+      \centering
+      \includegraphics[width=\textwidth]{tiandong.png} % 这里替换为你的图片文件名
+  \end{minipage}
+  \hspace{0.05\textwidth} % 间隔
+  \begin{minipage}[b]{0.4\textwidth}
+      \centering
+      \includegraphics[width=\textwidth]{maidong.png} % 这里替换为你的图片文件名
+  \end{minipage}
+
+  \begin{minipage}[b]{0.95\textwidth}
+      \centering
+      \includegraphics[width=\textwidth]{tiandong-maidong.png} % 这里替换为你的图片文件名
+  \end{minipage}
+  \caption{“二冬膏”中药材天冬、麦冬及合并后的基因关联网络示意图}
+\end{figure}
+
+“二冬膏”是一个较为简单、只包含两种药材的处方，方便用来作为示例。如果我们分别向STRING的\texttt{network} API 发送天冬关联的基因列表（ACHE, UGT1A4, SLCO1B3, SLCO1B1）和麦冬关联的基因列表（CDH1, VIM, CTNNB1, SRC, AKT1, ITGB1, MMP9, TGFB1, PTK2, CDH2）得到的是药材内部的基因关联网络，如左上、右上两图；而将这两个列表合并后发送，得到的是涉及两药材的全基因关联网络，如下图。我们不仅可以根据原来的基因列表筛选出仅发生在两药材之间的关联，还可以将其与药材内部的关联进行对比，或者衡量连通度等关联增益。在这个例子中，天冬关联的4个基因原本被分为不连通的两个部分，但是在与麦冬关联的基因列表合并后，这两个部分被连接了起来，最终的关联图只有一个连通部分，这可能意味着更强的协同作用。
+
+需要注意的是，不同药材的已知关联基因数目可能有极大的差异。上述天冬、麦冬只有10个以内的已知关联基因，而有些药材可能有数千个，以下列出了本研究中已知关联基因较多的几个药材：
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.8\textwidth]{gene_counts.png}
+  \caption{关联基因数大于500的药材及相应基因数}
+  \label{fig:top_genes}
+\end{figure}
+
+这种关联基因数的不均衡分布不仅会带来后续处理中的一些问题，如关联基因较多的药材可能会自然使得所属网络有显著的关联增益，使得药材始终被认为是“有效的”，或者某些药材关联的基因会完全覆盖其他药材，而且对 API 本身的调用也有影响。经过测试，\texttt{network} API所能接受的最大基因数目为2000，而我们的数据中已经有关联超过2000个基因的药材，但由于广泛存在的基因重复，实际任意药材涉及到的总基因数不超过4000，此时就可以采取分组提交的方法克服这一困难。对于任意一个长度不超过4000的基因列表，将其近似均分为4份，记为 $a, b, c, d$, 然后依次提交 $ab, ac, ad, bc, bd, be$ 这6个列表，最后再将返回的网络合并即可。
+
+如果仅仅进行现有药方的分析，我们只需要对各个药方中真实存在的药材对进行查询。但是，我们在后续比较中可能需要足够的负例，即并不真实存在、大概率无临床价值的随机药物组合。这大约是7.2倍的查询量，即从真实处方中出现的1685个药材对扩展到全部$\frac{1}{2} \times 156 \times (156 - 1) = 12090$种可能。
